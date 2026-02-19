@@ -1,24 +1,153 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
+import { useAuth } from "@/contexts/AuthContext";
+import { settingsAPI } from "@/services/api";
 import type { SystemSettings } from "@/types";
 
 export default function SettingsPage() {
+  const { token } = useAuth();
   const [activeTab, setActiveTab] = useState<
     "platform" | "revenue" | "notifications" | "security"
   >("platform");
 
-  const [settings, setSettings] = useState<SystemSettings>(() => ({
-    platformName: "ODOK WiFi Platform",
-    supportEmail: "support@odok.com",
+  const [settings, setSettings] = useState<SystemSettings>({
+    platformName: "",
+    supportEmail: "",
     revenueShare: 15,
     maintenanceMode: false,
     autoBackup: true,
     emailNotifications: true,
     smsNotifications: false,
-  }));
+  });
+
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Fetch settings on component mount
+  useEffect(() => {
+    const fetchSettings = async () => {
+      if (!token) return;
+
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await settingsAPI.get(token);
+
+        if (response.success && response.data) {
+          setSettings({
+            platformName: response.data.platformName || "",
+            supportEmail: response.data.supportEmail || "",
+            revenueShare: response.data.revenueShare || 15,
+            maintenanceMode: response.data.maintenanceMode || false,
+            autoBackup: response.data.autoBackup || true,
+            emailNotifications: response.data.emailNotifications || true,
+            smsNotifications: response.data.smsNotifications || false,
+          });
+        } else {
+          setError(response.message || "Failed to fetch settings");
+        }
+      } catch (err) {
+        console.error("Error fetching settings:", err);
+        setError("Failed to load settings. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSettings();
+  }, [token]);
+
+  const handleSave = async () => {
+    if (!token) return;
+
+    try {
+      setSaving(true);
+      setError(null);
+      setSuccessMessage(null);
+
+      const response = await settingsAPI.update(token, settings);
+
+      if (response.success) {
+        setSuccessMessage("Settings saved successfully!");
+        setTimeout(() => setSuccessMessage(null), 3000);
+      } else {
+        setError(response.message || "Failed to save settings");
+      }
+    } catch (err) {
+      console.error("Error saving settings:", err);
+      setError("Failed to save settings. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleToggle = async (field: keyof SystemSettings, value: boolean) => {
+    if (!token) return;
+
+    try {
+      // Optimistically update UI
+      setSettings((prev) => ({ ...prev, [field]: value }));
+
+      const response = await settingsAPI.patch(token, { [field]: value });
+
+      if (!response.success) {
+        // Revert on failure
+        setSettings((prev) => ({ ...prev, [field]: !value }));
+        setError(response.message || "Failed to update setting");
+      }
+    } catch (err) {
+      console.error("Error toggling setting:", err);
+      // Revert on error
+      setSettings((prev) => ({ ...prev, [field]: !value }));
+      setError("Failed to update setting. Please try again.");
+    }
+  };
+
+  const handleReset = async () => {
+    if (!token) return;
+
+    if (
+      !confirm(
+        "Are you sure you want to reset all settings to default values? This action cannot be undone.",
+      )
+    ) {
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setError(null);
+      setSuccessMessage(null);
+
+      const response = await settingsAPI.reset(token);
+
+      if (response.success && response.data) {
+        setSettings({
+          platformName: response.data.platformName || "",
+          supportEmail: response.data.supportEmail || "",
+          revenueShare: response.data.revenueShare || 15,
+          maintenanceMode: response.data.maintenanceMode || false,
+          autoBackup: response.data.autoBackup || true,
+          emailNotifications: response.data.emailNotifications || true,
+          smsNotifications: response.data.smsNotifications || false,
+        });
+        setSuccessMessage("Settings reset to default values!");
+        setTimeout(() => setSuccessMessage(null), 3000);
+      } else {
+        setError(response.message || "Failed to reset settings");
+      }
+    } catch (err) {
+      console.error("Error resetting settings:", err);
+      setError("Failed to reset settings. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const tabs = [
     {
@@ -99,10 +228,25 @@ export default function SettingsPage() {
     },
   ];
 
-  const handleSave = () => {
-    // Simulate save
-    alert("Settings saved successfully!");
-  };
+  if (loading) {
+    return (
+      <div className="flex h-screen bg-gray-50 overflow-hidden">
+        <Sidebar />
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+          <Header
+            title="Settings"
+            subtitle="Platform configuration and system preferences"
+          />
+          <main className="flex-1 p-8 overflow-y-auto flex items-center justify-center">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading settings...</p>
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
@@ -115,6 +259,68 @@ export default function SettingsPage() {
         />
 
         <main className="flex-1 p-8 overflow-y-auto">
+          {/* Error Message */}
+          {error && (
+            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+              <svg
+                className="w-5 h-5 text-red-600 mt-0.5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-red-800">{error}</p>
+              </div>
+              <button
+                onClick={() => setError(null)}
+                className="text-red-600 hover:text-red-800"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+          )}
+
+          {/* Success Message */}
+          {successMessage && (
+            <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg flex items-start gap-3">
+              <svg
+                className="w-5 h-5 text-green-600 mt-0.5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <p className="text-sm font-medium text-green-800 flex-1">
+                {successMessage}
+              </p>
+            </div>
+          )}
+
           <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
             {/* Tabs */}
             <div className="border-b border-gray-200">
@@ -158,7 +364,7 @@ export default function SettingsPage() {
                               platformName: e.target.value,
                             })
                           }
-                          className="w-full max-w-md px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full max-w-md px-4 py-2 text-gray-600 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                       </div>
                       <div>
@@ -174,7 +380,7 @@ export default function SettingsPage() {
                               supportEmail: e.target.value,
                             })
                           }
-                          className="w-full max-w-md px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full max-w-md px-4 py-2 text-gray-600 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                       </div>
                     </div>
@@ -199,10 +405,7 @@ export default function SettingsPage() {
                             type="checkbox"
                             checked={settings.maintenanceMode}
                             onChange={(e) =>
-                              setSettings({
-                                ...settings,
-                                maintenanceMode: e.target.checked,
-                              })
+                              handleToggle("maintenanceMode", e.target.checked)
                             }
                             className="sr-only peer"
                           />
@@ -224,10 +427,7 @@ export default function SettingsPage() {
                             type="checkbox"
                             checked={settings.autoBackup}
                             onChange={(e) =>
-                              setSettings({
-                                ...settings,
-                                autoBackup: e.target.checked,
-                              })
+                              handleToggle("autoBackup", e.target.checked)
                             }
                             className="sr-only peer"
                           />
@@ -340,10 +540,10 @@ export default function SettingsPage() {
                             type="checkbox"
                             checked={settings.emailNotifications}
                             onChange={(e) =>
-                              setSettings({
-                                ...settings,
-                                emailNotifications: e.target.checked,
-                              })
+                              handleToggle(
+                                "emailNotifications",
+                                e.target.checked,
+                              )
                             }
                             className="sr-only peer"
                           />
@@ -365,10 +565,7 @@ export default function SettingsPage() {
                             type="checkbox"
                             checked={settings.smsNotifications}
                             onChange={(e) =>
-                              setSettings({
-                                ...settings,
-                                smsNotifications: e.target.checked,
-                              })
+                              handleToggle("smsNotifications", e.target.checked)
                             }
                             className="sr-only peer"
                           />
@@ -496,19 +693,56 @@ export default function SettingsPage() {
             </div>
 
             {/* Save Button */}
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3">
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center gap-3">
               <button
-                type="button"
-                className="px-4 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-white transition-colors"
+                onClick={handleReset}
+                disabled={saving}
+                className="px-4 py-2 text-red-600 hover:bg-red-50 border border-red-200 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Cancel
+                Reset to Defaults
               </button>
-              <button
-                onClick={handleSave}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Save Changes
-              </button>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  className="px-4 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-white transition-colors"
+                  disabled={saving}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {saving ? (
+                    <>
+                      <svg
+                        className="animate-spin h-4 w-4"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
+                      </svg>
+                      Saving...
+                    </>
+                  ) : (
+                    "Save Changes"
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </main>

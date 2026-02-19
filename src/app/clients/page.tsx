@@ -196,13 +196,13 @@ function ClientsContent() {
           {/* Filters and Actions */}
           <div className="bg-white rounded-lg border border-gray-200 px-6 py-4 mb-4">
             <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-              <div className="flex-1 w-full md:max-w-md">
+              <div className="flex-1 w-full md:max-w-md border border-gray-300 rounded-2xl focus-within:ring-1 focus-within:ring-blue-500">
                 <input
                   type="text"
                   placeholder="Search by name, business, or email..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full px-4 py-2 border text-gray-600 border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="w-full px-4 py-2 border text-gray-600 border-gray-200 rounded-2xl focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
               </div>
 
@@ -265,7 +265,7 @@ function ClientsContent() {
                 {clients.map((client) => (
                   <div
                     key={client._id}
-                    className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow"
+                    className="bg-gray-100 rounded-2xl border border-gray-300 p-6 hover:shadow-md transition-shadow"
                   >
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-start gap-3 flex-1 min-w-0">
@@ -294,7 +294,7 @@ function ClientsContent() {
 
                       <button
                         onClick={() => handleDeleteClick(client)}
-                        className="text-red-400 hover:text-red-600 p-1"
+                        className="text-red-400 hover:text-red-600 hover:cursor-pointer p-1"
                         title="Delete client"
                       >
                         <svg
@@ -341,7 +341,7 @@ function ClientsContent() {
                       </div>
                       <button
                         onClick={() => handleViewDetails(client)}
-                        className="px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        className="px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-600 hover:text-white hover:cursor-pointer rounded-lg transition-colors"
                       >
                         View Details
                       </button>
