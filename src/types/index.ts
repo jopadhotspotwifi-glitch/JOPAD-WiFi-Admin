@@ -96,3 +96,39 @@ export interface SystemSettings {
   emailNotifications: boolean;
   smsNotifications: boolean;
 }
+
+export interface Ad {
+  _id: string;
+  title: string;
+  type: "image" | "video";
+  mediaUrl: string;
+  linkUrl: string | null;
+  locationId: {
+    _id: string;
+    name: string;
+    address: string;
+  } | null;
+  status: "active" | "inactive";
+  priority: number;
+  startDate: string | null;
+  endDate: string | null;
+  impressions: number;
+  clicks: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdStats {
+  total: number;
+  active: number;
+  inactive: number;
+  totalImpressions: number;
+  totalClicks: number;
+}
+
+export interface AdLocation {
+  _id: string;
+  name: string;
+  address: string;
+  clientId: string;
+}

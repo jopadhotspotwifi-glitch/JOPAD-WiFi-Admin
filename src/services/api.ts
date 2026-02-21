@@ -1,4 +1,4 @@
-import type { SystemSettings } from "@/types";
+import type { SystemSettings, Ad, AdStats, AdLocation } from "@/types";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
@@ -312,6 +312,174 @@ export const statsAPI = {
         success: false,
         message: "Network error. Please check your connection.",
       };
+    }
+  },
+};
+
+export const adsAPI = {
+  /**
+   * Get all ads with optional filters
+   */
+  getAll: async (
+    token: string,
+    filters?: { status?: string; type?: string; locationId?: string },
+  ): Promise<{ success: boolean; ads: Ad[]; count: number }> => {
+    try {
+      const params = new URLSearchParams();
+      if (filters?.status) params.set("status", filters.status);
+      if (filters?.type) params.set("type", filters.type);
+      if (filters?.locationId) params.set("locationId", filters.locationId);
+
+      const response = await fetch(
+        `${API_BASE_URL}/admin/ads?${params.toString()}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      return await response.json();
+    } catch (error) {
+      console.error("Error fetching ads:", error);
+      return { success: false, ads: [], count: 0 };
+    }
+  },
+
+  /**
+   * Get ad statistics
+   */
+  getStats: async (
+    token: string,
+  ): Promise<{ success: boolean; stats: AdStats }> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/ads/stats/summary`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return await response.json();
+    } catch (error) {
+      console.error("Error fetching ad stats:", error);
+      return {
+        success: false,
+        stats: {
+          total: 0,
+          active: 0,
+          inactive: 0,
+          totalImpressions: 0,
+          totalClicks: 0,
+        },
+      };
+    }
+  },
+
+  /**
+   * Get a single ad by ID
+   */
+  getById: async (
+    token: string,
+    adId: string,
+  ): Promise<{ success: boolean; ad: Ad }> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/ads/${adId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return await response.json();
+    } catch (error) {
+      console.error("Error fetching ad:", error);
+      return { success: false, ad: {} as Ad };
+    }
+  },
+
+  /**
+   * Create a new ad — supports FormData (file upload) or JSON (external URL)
+   */
+  create: async (
+    token: string,
+    data: FormData,
+  ): Promise<{ success: boolean; ad?: Ad; message?: string }> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/ads`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: data,
+      });
+      return await response.json();
+    } catch (error) {
+      console.error("Error creating ad:", error);
+      return { success: false, message: "Network error" };
+    }
+  },
+
+  /**
+   * Update an ad
+   */
+  update: async (
+    token: string,
+    adId: string,
+    data: FormData,
+  ): Promise<{ success: boolean; ad?: Ad; message?: string }> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/ads/${adId}`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}` },
+        body: data,
+      });
+      return await response.json();
+    } catch (error) {
+      console.error("Error updating ad:", error);
+      return { success: false, message: "Network error" };
+    }
+  },
+
+  /**
+   * Toggle ad active/inactive
+   */
+  toggle: async (
+    token: string,
+    adId: string,
+  ): Promise<{ success: boolean; ad?: Ad }> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/ads/${adId}/toggle`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return await response.json();
+    } catch (error) {
+      console.error("Error toggling ad:", error);
+      return { success: false };
+    }
+  },
+
+  /**
+   * Delete an ad
+   */
+  delete: async (
+    token: string,
+    adId: string,
+  ): Promise<{ success: boolean; message?: string }> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/ads/${adId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return await response.json();
+    } catch (error) {
+      console.error("Error deleting ad:", error);
+      return { success: false, message: "Network error" };
+    }
+  },
+
+  /**
+   * Get all locations for dropdown
+   */
+  getLocations: async (
+    token: string,
+  ): Promise<{ success: boolean; locations: AdLocation[] }> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/ads/locations/list`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return await response.json();
+    } catch (error) {
+      console.error("Error fetching locations:", error);
+      return { success: false, locations: [] };
     }
   },
 };
