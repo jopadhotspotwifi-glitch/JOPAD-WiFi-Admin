@@ -189,7 +189,7 @@ export default function LocationsPage() {
               </div>
 
               {/* Filters */}
-              <div className="bg-gray-200 rounded-2xl border border-gray-300 p-6 mb-6">
+              <div className="bg-gray-100 rounded-2xl border border-gray-200 p-6 mb-6">
                 <div className="flex flex-col md:flex-row gap-4">
                   <div className="flex-1">
                     <input

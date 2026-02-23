@@ -132,3 +132,61 @@ export interface AdLocation {
   address: string;
   clientId: string;
 }
+
+// Analytics types
+export interface SessionByPlan {
+  plan: string;
+  sessions: number;
+  revenue: number;
+  percentage: number;
+}
+
+export interface TopLocation {
+  name: string;
+  client: string;
+  sessions: number;
+  revenue: number;
+}
+
+export interface DeviceStat {
+  type: string;
+  count: number;
+  percentage: number;
+}
+
+export interface HourlyTraffic {
+  hour: string;
+  sessions: number;
+}
+
+export interface AnalyticsData {
+  sessionsByPlan: SessionByPlan[];
+  topLocations: TopLocation[];
+  deviceStats: DeviceStat[];
+  hourlyData: HourlyTraffic[];
+}
+
+// Revenue types
+export interface RevenueByClient {
+  clientName: string;
+  revenue: number;
+  percentage: number;
+  trend: number;
+}
+
+export interface RevenueByPlan {
+  plan: string;
+  revenue: number;
+  count: number;
+  avg: number;
+}
+
+export interface RevenueAnalytics {
+  totalRevenue: number;
+  platformRevenue: number;
+  clientRevenue: number;
+  revenueShare: number;
+  trend: RevenueData[];
+  byClient: RevenueByClient[];
+  byPlan: RevenueByPlan[];
+}

@@ -252,7 +252,7 @@ function DashboardContent() {
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Revenue Chart */}
-                <div className="lg:col-span-2 bg-gray-200 rounded-2xl border border-gray-300 p-6">
+                <div className="lg:col-span-2 bg-gray-100 rounded-2xl border border-gray-200 p-6">
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="text-lg font-semibold text-gray-900">
                       7-Day Revenue
@@ -286,7 +286,7 @@ function DashboardContent() {
                 </div>
 
                 {/* Recent Activity */}
-                <div className="bg-gray-200 rounded-2xl border border-gray-300 p-6">
+                <div className="bg-gray-100 rounded-2xl border border-gray-200 p-6">
                   <h2 className="text-lg font-semibold text-gray-900 mb-4">
                     Recent Activity
                   </h2>
@@ -318,7 +318,7 @@ function DashboardContent() {
 
               {/* Quick Stats */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
-                <div className="bg-gray-200 rounded-2xl border border-gray-300 p-6">
+                <div className="bg-gray-100 rounded-2xl border border-gray-200 p-6">
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="text-sm font-medium text-gray-600">
                       Monthly Revenue
@@ -345,7 +345,7 @@ function DashboardContent() {
                   </p>
                 </div>
 
-                <div className="bg-gray-200 rounded-2xl border border-gray-300 p-6">
+                <div className="bg-gray-100 rounded-2xl border border-gray-200 p-6">
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="text-sm font-medium text-gray-600">
                       Total Revenue
@@ -370,7 +370,7 @@ function DashboardContent() {
                   <p className="text-xs text-gray-500 mt-1">All time</p>
                 </div>
 
-                <div className="bg-gray-200 rounded-2xl border border-gray-300 p-6">
+                <div className="bg-gray-100 rounded-2xl border border-gray-200 p-6">
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="text-sm font-medium text-gray-600">
                       Active Rate

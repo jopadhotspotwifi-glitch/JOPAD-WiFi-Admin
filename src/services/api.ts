@@ -1,4 +1,11 @@
-import type { SystemSettings, Ad, AdStats, AdLocation } from "@/types";
+import type {
+  SystemSettings,
+  Ad,
+  AdStats,
+  AdLocation,
+  AnalyticsData,
+  RevenueAnalytics,
+} from "@/types";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
@@ -467,6 +474,29 @@ export const adsAPI = {
   },
 
   /**
+   * Bulk-update ad priorities after drag-and-drop reorder
+   */
+  reorder: async (
+    token: string,
+    order: { id: string; priority: number }[],
+  ): Promise<{ success: boolean }> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/ads/reorder`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ order }),
+      });
+      return await response.json();
+    } catch (error) {
+      console.error("Error reordering ads:", error);
+      return { success: false };
+    }
+  },
+
+  /**
    * Get all locations for dropdown
    */
   getLocations: async (
@@ -480,6 +510,89 @@ export const adsAPI = {
     } catch (error) {
       console.error("Error fetching locations:", error);
       return { success: false, locations: [] };
+    }
+  },
+};
+
+export const analyticsAPI = {
+  /**
+   * Get platform-wide analytics data
+   */
+  get: async (
+    token: string,
+    period: string = "30d",
+  ): Promise<{ success: boolean; analytics: AnalyticsData }> => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/admin/analytics?period=${period}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({
+          success: false,
+          message: "Failed to fetch analytics",
+        }));
+        return errorData;
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error("Error fetching analytics:", error);
+      return {
+        success: false,
+        analytics: {
+          sessionsByPlan: [],
+          topLocations: [],
+          deviceStats: [],
+          hourlyData: [],
+        },
+      };
+    }
+  },
+};
+
+export const revenueAPI = {
+  /**
+   * Get platform-wide revenue analytics
+   */
+  get: async (
+    token: string,
+    period: string = "30d",
+  ): Promise<{ success: boolean; revenue: RevenueAnalytics }> => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/admin/revenue?period=${period}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({
+          success: false,
+          message: "Failed to fetch revenue data",
+        }));
+        return errorData;
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error("Error fetching revenue:", error);
+      return {
+        success: false,
+        revenue: {
+          totalRevenue: 0,
+          platformRevenue: 0,
+          clientRevenue: 0,
+          revenueShare: 15,
+          trend: [],
+          byClient: [],
+          byPlan: [],
+        },
+      };
     }
   },
 };

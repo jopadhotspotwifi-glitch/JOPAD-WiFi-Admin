@@ -30,7 +30,7 @@ export default function StatsCard({
 
   return (
     <div
-      className={`bg-gray-200 rounded-2xl border border-gray-300 p-4 ${className}`}
+      className={`bg-gray-100 rounded-2xl border border-gray-200 p-4 ${className}`}
     >
       <p className="text-sm text-gray-600 mb-1">{label}</p>
       <div className="flex items-center gap-2">
