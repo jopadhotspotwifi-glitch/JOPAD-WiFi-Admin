@@ -1,12 +1,21 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import StatCard from "@/components/StatCard";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import { statsAPI } from "@/services/api";
-import type { PlatformStats, ClientActivity } from "@/types";
+import { statsAPI, revenueAPI } from "@/services/api";
+import type { PlatformStats, ClientActivity, RevenueData } from "@/types";
 
 export default function DashboardPage() {
   return (
@@ -31,99 +40,63 @@ function DashboardContent() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [recentActivity, setRecentActivity] = useState<ClientActivity[]>([]);
+  const [revenueTrend, setRevenueTrend] = useState<RevenueData[]>([]);
+  const [currentTime] = useState(() => Date.now());
 
-  // Fetch real stats from API
+  // Fetch real stats, revenue trend, and activity from API
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchData = async () => {
       const token = localStorage.getItem("admin_token");
       if (!token) return;
 
       try {
         setLoading(true);
-        const response = await statsAPI.get(token);
+        const [statsRes, revenueRes, activityRes] = await Promise.all([
+          statsAPI.get(token),
+          revenueAPI.get(token, "7d"),
+          statsAPI.getActivity(token),
+        ]);
 
-        if (response.success && response.stats) {
-          setStats(response.stats);
+        if (statsRes.success && statsRes.stats) {
+          setStats(statsRes.stats);
           setError(null);
         } else {
-          setError(response.message || "Failed to fetch statistics");
+          setError(statsRes.message || "Failed to fetch statistics");
+        }
+
+        if (revenueRes.success && revenueRes.revenue) {
+          setRevenueTrend(revenueRes.revenue.trend);
+        }
+
+        if (activityRes.success) {
+          setRecentActivity(activityRes.activity);
         }
       } catch (err) {
-        console.error("Error fetching stats:", err);
+        console.error("Error fetching dashboard data:", err);
         setError("Failed to fetch statistics");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchStats();
+    fetchData();
   }, []);
-
-  const [recentActivity] = useState<ClientActivity[]>(() => [
-    {
-      id: "1",
-      clientId: "c1",
-      clientName: "Downtown Cafe",
-      action: "Added new location",
-      timestamp: new Date(Date.now() - 5 * 60000),
-      details: "Airport Branch",
-    },
-    {
-      id: "2",
-      clientId: "c2",
-      clientName: "Mall WiFi Services",
-      action: "Generated vouchers",
-      timestamp: new Date(Date.now() - 15 * 60000),
-      details: "500 vouchers",
-    },
-    {
-      id: "3",
-      clientId: "c3",
-      clientName: "Hotel Paradise",
-      action: "Updated pricing plan",
-      timestamp: new Date(Date.now() - 32 * 60000),
-      details: "Premium Plan",
-    },
-    {
-      id: "4",
-      clientId: "c4",
-      clientName: "City Restaurant",
-      action: "Registered new client",
-      timestamp: new Date(Date.now() - 45 * 60000),
-    },
-    {
-      id: "5",
-      clientId: "c5",
-      clientName: "Beach Resort",
-      action: "Router configuration updated",
-      timestamp: new Date(Date.now() - 68 * 60000),
-      details: "MikroTik",
-    },
-  ]);
-
-  const [revenueData] = useState(() => [
-    { day: "Mon", amount: 6200000 },
-    { day: "Tue", amount: 6800000 },
-    { day: "Wed", amount: 5900000 },
-    { day: "Thu", amount: 7400000 },
-    { day: "Fri", amount: 8100000 },
-    { day: "Sat", amount: 5700000 },
-    { day: "Sun", amount: 5580000 },
-  ]);
-
-  const maxRevenue = Math.max(...revenueData.map((d) => d.amount));
-
-  const [currentTime] = useState(() => Date.now());
 
   const formatCurrency = (amount: number) => {
     return `UGX ${(amount / 1000).toFixed(0)}K`;
   };
 
-  const formatTimeAgo = (date: Date) => {
-    const minutes = Math.floor((currentTime - date.getTime()) / 60000);
+  const formatTimeAgo = (date: Date | string) => {
+    const ms =
+      typeof date === "string" ? new Date(date).getTime() : date.getTime();
+    const minutes = Math.floor((currentTime - ms) / 60000);
+    if (minutes < 1) return "just now";
     if (minutes < 60) return `${minutes}m ago`;
     const hours = Math.floor(minutes / 60);
-    return `${hours}h ago`;
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
   };
 
   return (
@@ -259,30 +232,53 @@ function DashboardContent() {
                     </h2>
                     <span className="text-sm text-gray-500">Last 7 days</span>
                   </div>
-                  <div className="flex items-end justify-between gap-4 h-64">
-                    {revenueData.map((data, index) => (
-                      <div
-                        key={index}
-                        className="flex-1 flex flex-col items-center gap-2"
+                  {revenueTrend.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={256}>
+                      <BarChart
+                        data={revenueTrend}
+                        margin={{ top: 5, right: 5, left: 0, bottom: 5 }}
                       >
-                        <div className="w-full bg-gray-100 rounded-t flex items-end justify-center relative group">
-                          <div
-                            className="w-full bg-blue-600 rounded-t transition-all hover:bg-blue-700 cursor-pointer"
-                            style={{
-                              height: `${(data.amount / maxRevenue) * 240}px`,
-                            }}
-                          >
-                            <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                              {formatCurrency(data.amount)}
-                            </div>
-                          </div>
-                        </div>
-                        <span className="text-sm text-gray-600">
-                          {data.day}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          stroke="#d1d5db"
+                          vertical={false}
+                        />
+                        <XAxis
+                          dataKey="date"
+                          tick={{ fontSize: 12, fill: "#6b7280" }}
+                          axisLine={false}
+                          tickLine={false}
+                        />
+                        <YAxis
+                          tickFormatter={(v: number) => formatCurrency(v)}
+                          tick={{ fontSize: 11, fill: "#6b7280" }}
+                          axisLine={false}
+                          tickLine={false}
+                          width={72}
+                        />
+                        <Tooltip
+                          formatter={(value: number) => [
+                            formatCurrency(value),
+                            "Revenue",
+                          ]}
+                          contentStyle={{
+                            borderRadius: "8px",
+                            border: "1px solid #e5e7eb",
+                            fontSize: "12px",
+                          }}
+                        />
+                        <Bar
+                          dataKey="revenue"
+                          fill="#2563eb"
+                          radius={[4, 4, 0, 0]}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="flex items-center justify-center h-64 text-gray-400 text-sm">
+                      No revenue data available yet
+                    </div>
+                  )}
                 </div>
 
                 {/* Recent Activity */}
@@ -290,29 +286,35 @@ function DashboardContent() {
                   <h2 className="text-lg font-semibold text-gray-900 mb-4">
                     Recent Activity
                   </h2>
-                  <div className="space-y-4">
-                    {recentActivity.map((activity) => (
-                      <div key={activity.id} className="flex gap-3">
-                        <div className="w-2 h-2 bg-blue-600 rounded-full mt-2 shrink-0"></div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate">
-                            {activity.clientName}
-                          </p>
-                          <p className="text-xs text-gray-600">
-                            {activity.action}
-                          </p>
-                          {activity.details && (
-                            <p className="text-xs text-gray-500 mt-0.5">
-                              {activity.details}
+                  {recentActivity.length > 0 ? (
+                    <div className="space-y-4">
+                      {recentActivity.map((activity) => (
+                        <div key={activity.id} className="flex gap-3">
+                          <div className="w-2 h-2 bg-blue-600 rounded-full mt-2 shrink-0"></div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">
+                              {activity.clientName}
                             </p>
-                          )}
-                          <p className="text-xs text-gray-400 mt-1">
-                            {formatTimeAgo(activity.timestamp)}
-                          </p>
+                            <p className="text-xs text-gray-600">
+                              {activity.action}
+                            </p>
+                            {activity.details && (
+                              <p className="text-xs text-gray-500 mt-0.5">
+                                {activity.details}
+                              </p>
+                            )}
+                            <p className="text-xs text-gray-400 mt-1">
+                              {formatTimeAgo(activity.timestamp)}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center h-40 text-gray-400 text-sm">
+                      No recent activity
+                    </div>
+                  )}
                 </div>
               </div>
 

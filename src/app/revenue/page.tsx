@@ -1,6 +1,21 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import {
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -65,8 +80,6 @@ function RevenueContent() {
     };
     fetchData();
   }, [token, timeRange]);
-
-  const maxRevenue = Math.max(...revenueTrend.map((m) => m.revenue), 1);
 
   const formatCurrency = (amount: number) => {
     if (amount >= 1000000) {
@@ -253,43 +266,75 @@ function RevenueContent() {
                       {timeRangeLabel}
                     </span>
                   </div>
-                  <div className="flex items-end justify-between gap-4 h-72">
-                    {revenueTrend.map((data, index) => (
-                      <div
-                        key={index}
-                        className="flex-1 flex flex-col items-center gap-3"
-                      >
-                        <div className="w-full bg-gray-100 rounded-t flex items-end justify-center relative group">
-                          <div
-                            className="w-full bg-linear-to-t from-blue-600 to-blue-400 rounded-t transition-all hover:from-blue-700 hover:to-blue-500 cursor-pointer"
-                            style={{
-                              height: `${(data.revenue / maxRevenue) * 260}px`,
-                            }}
-                          >
-                            <div className="absolute -top-16 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs py-2 px-3 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                              <p className="font-semibold">
-                                {formatCurrency(data.revenue)}
-                              </p>
-                              <p className="text-gray-300">
-                                {data.sessions.toLocaleString()} sessions
-                              </p>
-                              <p className="text-gray-300">
-                                {data.clients} clients
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-sm font-medium text-gray-700">
-                            {data.date}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {formatCurrency(data.revenue)}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  <ResponsiveContainer width="100%" height={288}>
+                    <AreaChart
+                      data={revenueTrend}
+                      margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
+                    >
+                      <defs>
+                        <linearGradient
+                          id="revenueGradient"
+                          x1="0"
+                          y1="0"
+                          x2="0"
+                          y2="1"
+                        >
+                          <stop
+                            offset="5%"
+                            stopColor="#2563eb"
+                            stopOpacity={0.15}
+                          />
+                          <stop
+                            offset="95%"
+                            stopColor="#2563eb"
+                            stopOpacity={0}
+                          />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke="#f0f0f0"
+                        vertical={false}
+                      />
+                      <XAxis
+                        dataKey="date"
+                        tick={{ fontSize: 12, fill: "#6b7280" }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        tickFormatter={(v: number) => formatCurrency(v)}
+                        tick={{ fontSize: 11, fill: "#6b7280" }}
+                        axisLine={false}
+                        tickLine={false}
+                        width={80}
+                      />
+                      <Tooltip
+                        formatter={(value: number, name: string) => {
+                          if (name === "revenue")
+                            return [formatCurrency(value), "Revenue"];
+                          if (name === "sessions")
+                            return [value.toLocaleString(), "Sessions"];
+                          return [value, name];
+                        }}
+                        contentStyle={{
+                          borderRadius: "8px",
+                          border: "1px solid #e5e7eb",
+                          fontSize: "12px",
+                        }}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="revenue"
+                        stroke="#2563eb"
+                        strokeWidth={2}
+                        fill="url(#revenueGradient)"
+                        dot={false}
+                        activeDot={{ r: 4 }}
+                        name="revenue"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
                 </div>
               ) : (
                 <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6 text-center py-16">
@@ -322,39 +367,53 @@ function RevenueContent() {
                     Top Clients by Revenue
                   </h2>
                   {revenueByClient.length > 0 ? (
-                    <div className="space-y-4">
-                      {revenueByClient.map((client, index) => (
-                        <div key={index} className="flex items-center gap-4">
-                          <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 font-bold text-sm flex items-center justify-center shrink-0">
-                            {index + 1}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between mb-1">
-                              <p className="text-sm font-medium text-gray-900 truncate">
-                                {client.clientName}
-                              </p>
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm font-semibold text-gray-900">
-                                  {formatCurrency(client.revenue)}
-                                </span>
-                                <span
-                                  className={`text-xs font-medium ${client.trend > 0 ? "text-green-600" : "text-red-600"}`}
-                                >
-                                  {client.trend > 0 ? "+" : ""}
-                                  {client.trend}%
-                                </span>
-                              </div>
-                            </div>
-                            <div className="w-full bg-gray-100 rounded-full h-2">
-                              <div
-                                className="bg-blue-600 h-2 rounded-full transition-all"
-                                style={{ width: `${client.percentage}%` }}
-                              ></div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                    <ResponsiveContainer
+                      width="100%"
+                      height={revenueByClient.length * 52 + 20}
+                    >
+                      <BarChart
+                        layout="vertical"
+                        data={revenueByClient}
+                        margin={{ top: 0, right: 10, left: 0, bottom: 0 }}
+                      >
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          stroke="#f0f0f0"
+                          horizontal={false}
+                        />
+                        <XAxis
+                          type="number"
+                          tickFormatter={(v: number) => formatCurrency(v)}
+                          tick={{ fontSize: 11, fill: "#6b7280" }}
+                          axisLine={false}
+                          tickLine={false}
+                        />
+                        <YAxis
+                          type="category"
+                          dataKey="clientName"
+                          tick={{ fontSize: 12, fill: "#374151" }}
+                          axisLine={false}
+                          tickLine={false}
+                          width={110}
+                        />
+                        <Tooltip
+                          formatter={(value: number) => [
+                            formatCurrency(value),
+                            "Revenue",
+                          ]}
+                          contentStyle={{
+                            borderRadius: "8px",
+                            border: "1px solid #e5e7eb",
+                            fontSize: "12px",
+                          }}
+                        />
+                        <Bar
+                          dataKey="revenue"
+                          fill="#2563eb"
+                          radius={[0, 4, 4, 0]}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
                   ) : (
                     <p className="text-gray-500 text-sm">
                       No client revenue data available
@@ -368,37 +427,74 @@ function RevenueContent() {
                     Revenue by Pricing Plan
                   </h2>
                   {revenueByPlan.length > 0 ? (
-                    <div className="space-y-4">
-                      {revenueByPlan.map((plan, index) => (
-                        <div
-                          key={index}
-                          className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
-                        >
-                          <div className="flex items-center justify-between mb-3">
-                            <h3 className="text-sm font-semibold text-gray-900">
-                              {plan.plan}
-                            </h3>
-                            <span className="text-lg font-bold text-blue-600">
-                              {formatCurrency(plan.revenue)}
-                            </span>
-                          </div>
-                          <div className="grid grid-cols-2 gap-4 text-sm">
-                            <div>
-                              <p className="text-gray-500">Sessions</p>
-                              <p className="font-medium text-gray-900">
-                                {plan.count.toLocaleString()}
-                              </p>
+                    <>
+                      <ResponsiveContainer width="100%" height={220}>
+                        <PieChart>
+                          <Pie
+                            data={revenueByPlan}
+                            dataKey="revenue"
+                            nameKey="plan"
+                            cx="50%"
+                            cy="50%"
+                            outerRadius={90}
+                            innerRadius={50}
+                            paddingAngle={3}
+                          >
+                            {revenueByPlan.map((_entry, index) => (
+                              <Cell
+                                key={`cell-${index}`}
+                                fill={
+                                  [
+                                    "#2563eb",
+                                    "#7c3aed",
+                                    "#059669",
+                                    "#d97706",
+                                    "#dc2626",
+                                  ][index % 5]
+                                }
+                              />
+                            ))}
+                          </Pie>
+                          <Tooltip
+                            formatter={(value: number) => [
+                              formatCurrency(value),
+                              "Revenue",
+                            ]}
+                            contentStyle={{
+                              borderRadius: "8px",
+                              border: "1px solid #e5e7eb",
+                              fontSize: "12px",
+                            }}
+                          />
+                          <Legend
+                            iconType="circle"
+                            iconSize={8}
+                            wrapperStyle={{
+                              fontSize: "12px",
+                              paddingTop: "8px",
+                            }}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <div className="mt-4 space-y-2">
+                        {revenueByPlan.map((plan, index) => (
+                          <div
+                            key={index}
+                            className="flex items-center justify-between text-sm"
+                          >
+                            <span className="text-gray-600">{plan.plan}</span>
+                            <div className="flex items-center gap-3">
+                              <span className="text-gray-500">
+                                {plan.count.toLocaleString()} sessions
+                              </span>
+                              <span className="font-semibold text-gray-900">
+                                {formatCurrency(plan.revenue)}
+                              </span>
                             </div>
-                            <div>
-                              <p className="text-gray-500">Avg/Session</p>
-                              <p className="font-medium text-gray-900">
-                                {formatCurrency(plan.avg)}
-                              </p>
-                            </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    </>
                   ) : (
                     <p className="text-gray-500 text-sm">
                       No plan revenue data available

@@ -321,6 +321,35 @@ export const statsAPI = {
       };
     }
   },
+
+  /**
+   * Get recent platform activity (clients, locations, payments)
+   */
+  getActivity: async (
+    token: string,
+  ): Promise<{
+    success: boolean;
+    activity: import("@/types").ClientActivity[];
+  }> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/stats/activity`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        return { success: false, activity: [] };
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error("Network error fetching activity:", error);
+      return { success: false, activity: [] };
+    }
+  },
 };
 
 export const adsAPI = {

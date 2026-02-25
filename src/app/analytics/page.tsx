@@ -1,6 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import {
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -63,8 +76,6 @@ function AnalyticsContent() {
     };
     fetchData();
   }, [token, timeRange]);
-
-  const maxHourly = Math.max(...hourlyData.map((d) => d.sessions), 1);
 
   const formatCurrency = (amount: number) => {
     if (amount >= 1000000) {
@@ -174,28 +185,61 @@ function AnalyticsContent() {
                   <h2 className="text-lg font-semibold text-gray-900 mb-6">
                     Sessions by Plan
                   </h2>
-                  <div className="space-y-4">
+                  <ResponsiveContainer width="100%" height={220}>
+                    <PieChart>
+                      <Pie
+                        data={sessionsByPlan}
+                        dataKey="sessions"
+                        nameKey="plan"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={90}
+                        innerRadius={50}
+                        paddingAngle={3}
+                      >
+                        {sessionsByPlan.map((_entry, index) => (
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={
+                              [
+                                "#2563eb",
+                                "#7c3aed",
+                                "#059669",
+                                "#d97706",
+                                "#dc2626",
+                              ][index % 5]
+                            }
+                          />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(value: number, name: string) => [
+                          value.toLocaleString(),
+                          name === "sessions" ? "Sessions" : name,
+                        ]}
+                        contentStyle={{
+                          borderRadius: "8px",
+                          border: "1px solid #e5e7eb",
+                          fontSize: "12px",
+                        }}
+                      />
+                      <Legend
+                        iconType="circle"
+                        iconSize={8}
+                        wrapperStyle={{ fontSize: "12px", paddingTop: "8px" }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="mt-2 space-y-1">
                     {sessionsByPlan.map((plan, index) => (
-                      <div key={index}>
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-900">
-                              {plan.plan}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {plan.sessions.toLocaleString()} sessions
-                            </p>
-                          </div>
-                          <p className="text-sm font-semibold text-gray-900">
-                            {formatCurrency(plan.revenue)}
-                          </p>
-                        </div>
-                        <div className="w-full bg-gray-100 rounded-full h-2">
-                          <div
-                            className="bg-blue-600 h-2 rounded-full transition-all"
-                            style={{ width: `${plan.percentage}%` }}
-                          ></div>
-                        </div>
+                      <div
+                        key={index}
+                        className="flex items-center justify-between text-sm"
+                      >
+                        <span className="text-gray-600">{plan.plan}</span>
+                        <span className="font-medium text-gray-900">
+                          {formatCurrency(plan.revenue)}
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -208,40 +252,51 @@ function AnalyticsContent() {
                   </h2>
                   {deviceStats.length > 0 ? (
                     <>
-                      <div className="space-y-6">
-                        {deviceStats.map((device, index) => (
-                          <div key={index} className="flex items-center gap-4">
-                            <div className="shrink-0 w-20 text-right">
-                              <p className="text-2xl font-bold text-gray-900">
-                                {device.percentage}%
-                              </p>
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex items-center justify-between mb-1">
-                                <p className="text-sm font-medium text-gray-900">
-                                  {device.type}
-                                </p>
-                                <p className="text-xs text-gray-500">
-                                  {device.count.toLocaleString()}
-                                </p>
-                              </div>
-                              <div className="w-full bg-gray-100 rounded-full h-3">
-                                <div
-                                  className={`h-3 rounded-full transition-all ${
-                                    index === 0
-                                      ? "bg-blue-600"
-                                      : index === 1
-                                        ? "bg-purple-600"
-                                        : "bg-green-600"
-                                  }`}
-                                  style={{ width: `${device.percentage}%` }}
-                                ></div>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="mt-6 pt-6 border-t border-gray-100">
+                      <ResponsiveContainer width="100%" height={220}>
+                        <PieChart>
+                          <Pie
+                            data={deviceStats}
+                            dataKey="count"
+                            nameKey="type"
+                            cx="50%"
+                            cy="50%"
+                            outerRadius={90}
+                            innerRadius={50}
+                            paddingAngle={3}
+                          >
+                            {deviceStats.map((_entry, index) => (
+                              <Cell
+                                key={`cell-${index}`}
+                                fill={
+                                  ["#2563eb", "#7c3aed", "#059669", "#d97706"][
+                                    index % 4
+                                  ]
+                                }
+                              />
+                            ))}
+                          </Pie>
+                          <Tooltip
+                            formatter={(value: number) => [
+                              value.toLocaleString(),
+                              "Devices",
+                            ]}
+                            contentStyle={{
+                              borderRadius: "8px",
+                              border: "1px solid #e5e7eb",
+                              fontSize: "12px",
+                            }}
+                          />
+                          <Legend
+                            iconType="circle"
+                            iconSize={8}
+                            wrapperStyle={{
+                              fontSize: "12px",
+                              paddingTop: "8px",
+                            }}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <div className="mt-2 pt-4 border-t border-gray-100">
                         <p className="text-sm text-gray-600">
                           Total Devices:{" "}
                           <span className="font-semibold text-gray-900">
@@ -266,30 +321,46 @@ function AnalyticsContent() {
                   <h2 className="text-lg font-semibold text-gray-900 mb-6">
                     Hourly Traffic Pattern
                   </h2>
-                  <div className="flex items-end justify-between gap-4 h-48">
-                    {hourlyData.map((data, index) => (
-                      <div
-                        key={index}
-                        className="flex-1 flex flex-col items-center gap-2"
-                      >
-                        <div className="w-full bg-gray-100 rounded-t flex items-end justify-center relative group">
-                          <div
-                            className="w-full bg-blue-600 rounded-t transition-all hover:bg-blue-700 cursor-pointer"
-                            style={{
-                              height: `${(data.sessions / maxHourly) * 180}px`,
-                            }}
-                          >
-                            <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                              {data.sessions} sessions
-                            </div>
-                          </div>
-                        </div>
-                        <span className="text-xs text-gray-600">
-                          {data.hour}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+                  <ResponsiveContainer width="100%" height={192}>
+                    <BarChart
+                      data={hourlyData}
+                      margin={{ top: 5, right: 5, left: 0, bottom: 5 }}
+                    >
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke="#f0f0f0"
+                        vertical={false}
+                      />
+                      <XAxis
+                        dataKey="hour"
+                        tick={{ fontSize: 11, fill: "#6b7280" }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        tick={{ fontSize: 11, fill: "#6b7280" }}
+                        axisLine={false}
+                        tickLine={false}
+                        width={40}
+                      />
+                      <Tooltip
+                        formatter={(value: number) => [
+                          value.toLocaleString(),
+                          "Sessions",
+                        ]}
+                        contentStyle={{
+                          borderRadius: "8px",
+                          border: "1px solid #e5e7eb",
+                          fontSize: "12px",
+                        }}
+                      />
+                      <Bar
+                        dataKey="sessions"
+                        fill="#2563eb"
+                        radius={[4, 4, 0, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
               )}
 
