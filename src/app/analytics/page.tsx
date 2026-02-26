@@ -213,9 +213,12 @@ function AnalyticsContent() {
                         ))}
                       </Pie>
                       <Tooltip
-                        formatter={(value: number, name: string) => [
-                          value.toLocaleString(),
-                          name === "sessions" ? "Sessions" : name,
+                        formatter={(
+                          value: number | undefined,
+                          name: string | undefined,
+                        ) => [
+                          (value ?? 0).toLocaleString(),
+                          name === "sessions" ? "Sessions" : (name ?? ""),
                         ]}
                         contentStyle={{
                           borderRadius: "8px",
@@ -276,8 +279,8 @@ function AnalyticsContent() {
                             ))}
                           </Pie>
                           <Tooltip
-                            formatter={(value: number) => [
-                              value.toLocaleString(),
+                            formatter={(value: number | undefined) => [
+                              (value ?? 0).toLocaleString(),
                               "Devices",
                             ]}
                             contentStyle={{
@@ -344,8 +347,8 @@ function AnalyticsContent() {
                         width={40}
                       />
                       <Tooltip
-                        formatter={(value: number) => [
-                          value.toLocaleString(),
+                        formatter={(value: number | undefined) => [
+                          (value ?? 0).toLocaleString(),
                           "Sessions",
                         ]}
                         contentStyle={{

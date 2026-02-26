@@ -327,12 +327,16 @@ function RevenueContent() {
                         width={80}
                       />
                       <Tooltip
-                        formatter={(value: number, name: string) => {
+                        formatter={(
+                          value: number | undefined,
+                          name: string | undefined,
+                        ) => {
+                          const v = value ?? 0;
                           if (name === "revenue")
-                            return [formatCurrency(value), "Revenue"];
+                            return [formatCurrency(v), "Revenue"];
                           if (name === "sessions")
-                            return [value.toLocaleString(), "Sessions"];
-                          return [value, name];
+                            return [v.toLocaleString(), "Sessions"];
+                          return [v, name ?? ""];
                         }}
                         contentStyle={{
                           borderRadius: "8px",
@@ -414,8 +418,8 @@ function RevenueContent() {
                           width={110}
                         />
                         <Tooltip
-                          formatter={(value: number) => [
-                            formatCurrency(value),
+                          formatter={(value: number | undefined) => [
+                            formatCurrency(value ?? 0),
                             "Revenue",
                           ]}
                           contentStyle={{
@@ -472,8 +476,8 @@ function RevenueContent() {
                             ))}
                           </Pie>
                           <Tooltip
-                            formatter={(value: number) => [
-                              formatCurrency(value),
+                            formatter={(value: number | undefined) => [
+                              formatCurrency(value ?? 0),
                               "Revenue",
                             ]}
                             contentStyle={{
