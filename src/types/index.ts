@@ -181,6 +181,30 @@ export interface RevenueByPlan {
   avg: number;
 }
 
+export interface WithdrawalRecord {
+  _id: string;
+  clientId: string;
+  clientName?: string;
+  amount: number;
+  payoutMethod: "mobile_money" | "bank";
+  payoutDetails: {
+    phone?: string;
+    bankAccountNumber?: string;
+    bankName?: string;
+    accountName?: string;
+  };
+  status: "pending" | "processing" | "completed" | "failed";
+  julyPayTransactionId?: string;
+  createdAt: string;
+}
+
+export interface RevenueWithdrawalSummary {
+  totalWithdrawn: number;
+  pendingAmount: number;
+  pendingCount: number;
+  recent: WithdrawalRecord[];
+}
+
 export interface RevenueAnalytics {
   totalRevenue: number;
   platformRevenue: number;
@@ -189,4 +213,5 @@ export interface RevenueAnalytics {
   trend: RevenueData[];
   byClient: RevenueByClient[];
   byPlan: RevenueByPlan[];
+  withdrawals?: RevenueWithdrawalSummary;
 }

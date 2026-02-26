@@ -21,7 +21,12 @@ import Header from "@/components/Header";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/contexts/AuthContext";
 import { revenueAPI } from "@/services/api";
-import type { RevenueData, RevenueByClient, RevenueByPlan } from "@/types";
+import type {
+  RevenueData,
+  RevenueByClient,
+  RevenueByPlan,
+  WithdrawalRecord,
+} from "@/types";
 
 const periodMap: Record<string, string> = {
   "7days": "7d",
@@ -53,6 +58,12 @@ function RevenueContent() {
   const [platformRevenue, setPlatformRevenue] = useState(0);
   const [clientRevenue, setClientRevenue] = useState(0);
   const [revenueShare, setRevenueShare] = useState(15);
+  const [totalWithdrawn, setTotalWithdrawn] = useState(0);
+  const [pendingWithdrawals, setPendingWithdrawals] = useState(0);
+  const [pendingWithdrawalCount, setPendingWithdrawalCount] = useState(0);
+  const [recentWithdrawals, setRecentWithdrawals] = useState<
+    WithdrawalRecord[]
+  >([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -69,6 +80,12 @@ function RevenueContent() {
           setPlatformRevenue(res.revenue.platformRevenue);
           setClientRevenue(res.revenue.clientRevenue);
           setRevenueShare(res.revenue.revenueShare);
+          if (res.revenue.withdrawals) {
+            setTotalWithdrawn(res.revenue.withdrawals.totalWithdrawn);
+            setPendingWithdrawals(res.revenue.withdrawals.pendingAmount);
+            setPendingWithdrawalCount(res.revenue.withdrawals.pendingCount);
+            setRecentWithdrawals(res.revenue.withdrawals.recent ?? []);
+          }
         } else {
           setError("Failed to load revenue data");
         }
@@ -361,7 +378,7 @@ function RevenueContent() {
               )}
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Revenue by Client */}
+                {/* Revenue by Client */}{" "}
                 <div className="bg-white rounded-lg border border-gray-200 p-6">
                   <h2 className="text-lg font-semibold text-gray-900 mb-6">
                     Top Clients by Revenue
@@ -420,7 +437,6 @@ function RevenueContent() {
                     </p>
                   )}
                 </div>
-
                 {/* Revenue by Plan */}
                 <div className="bg-white rounded-lg border border-gray-200 p-6">
                   <h2 className="text-lg font-semibold text-gray-900 mb-6">
@@ -501,6 +517,107 @@ function RevenueContent() {
                     </p>
                   )}
                 </div>
+              </div>
+
+              {/* Withdrawals Section */}
+              <div className="mt-6">
+                <h2 className="mb-4 text-lg font-semibold text-gray-900">
+                  Client Withdrawals
+                </h2>
+
+                {/* Withdrawal summary cards */}
+                <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="rounded-lg border border-gray-200 bg-white p-5">
+                    <p className="text-sm font-medium text-gray-500">
+                      Total Withdrawn (All Time)
+                    </p>
+                    <p className="mt-1 text-2xl font-bold text-gray-900">
+                      {formatCurrency(totalWithdrawn)}
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-orange-100 bg-orange-50 p-5">
+                    <p className="text-sm font-medium text-orange-600">
+                      Pending / Processing ({pendingWithdrawalCount})
+                    </p>
+                    <p className="mt-1 text-2xl font-bold text-orange-700">
+                      {formatCurrency(pendingWithdrawals)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Withdrawal table */}
+                {recentWithdrawals.length > 0 ? (
+                  <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+                    <table className="min-w-full divide-y divide-gray-200 text-sm">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
+                            Client
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
+                            Amount
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
+                            Method
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
+                            Contact
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
+                            Status
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
+                            Date
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {recentWithdrawals.map((w) => (
+                          <tr key={w._id} className="hover:bg-gray-50">
+                            <td className="px-4 py-3 font-medium text-gray-900">
+                              {w.clientName || "—"}
+                            </td>
+                            <td className="px-4 py-3 font-semibold text-gray-900">
+                              UGX {w.amount.toLocaleString()}
+                            </td>
+                            <td className="px-4 py-3 text-gray-600">
+                              {w.payoutMethod === "mobile_money"
+                                ? "Mobile Money"
+                                : "Bank"}
+                            </td>
+                            <td className="px-4 py-3 text-gray-500 text-xs">
+                              {w.payoutMethod === "mobile_money"
+                                ? w.payoutDetails.phone
+                                : `${w.payoutDetails.bankName ?? ""} – ${w.payoutDetails.bankAccountNumber ?? ""}`}
+                            </td>
+                            <td className="px-4 py-3">
+                              <span
+                                className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                                  w.status === "completed"
+                                    ? "bg-green-100 text-green-700"
+                                    : w.status === "failed"
+                                      ? "bg-red-100 text-red-700"
+                                      : "bg-yellow-100 text-yellow-700"
+                                }`}
+                              >
+                                {w.status}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-gray-500">
+                              {new Date(w.createdAt).toLocaleDateString()}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-gray-200 bg-white p-8 text-center">
+                    <p className="text-gray-500 text-sm">
+                      No withdrawal requests yet
+                    </p>
+                  </div>
+                )}
               </div>
             </>
           )}
