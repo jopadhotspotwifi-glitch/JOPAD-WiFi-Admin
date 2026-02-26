@@ -205,11 +205,29 @@ export interface RevenueWithdrawalSummary {
   recent: WithdrawalRecord[];
 }
 
+export interface AdminWithdrawalRecord {
+  _id: string;
+  amount: number;
+  payoutMethod: "mobile_money" | "bank";
+  payoutDetails: {
+    phone?: string;
+    bankAccountNumber?: string;
+    bankName?: string;
+    accountName?: string;
+  };
+  status: "pending" | "processing" | "completed" | "failed";
+  julyPayTransactionId?: string;
+  note?: string;
+  createdAt: string;
+  completedAt?: string;
+}
+
 export interface RevenueAnalytics {
   totalRevenue: number;
   platformRevenue: number;
   clientRevenue: number;
   revenueShare: number;
+  adminWithdrawableBalance?: number;
   trend: RevenueData[];
   byClient: RevenueByClient[];
   byPlan: RevenueByPlan[];

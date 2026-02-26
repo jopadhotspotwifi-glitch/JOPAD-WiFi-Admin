@@ -64,6 +64,57 @@ function RevenueContent() {
   const [recentWithdrawals, setRecentWithdrawals] = useState<
     WithdrawalRecord[]
   >([]);
+  const [updatingWithdrawal, setUpdatingWithdrawal] = useState<string | null>(
+    null,
+  );
+  const [adminWithdrawableBalance, setAdminWithdrawableBalance] = useState(0);
+  const [showAdminWithdrawModal, setShowAdminWithdrawModal] = useState(false);
+  const [adminWithdrawStep, setAdminWithdrawStep] = useState<
+    "form" | "confirm" | "done"
+  >("form");
+  const [adminWithdrawAmount, setAdminWithdrawAmount] = useState("");
+  const [adminWithdrawMethod, setAdminWithdrawMethod] = useState<
+    "mobile_money" | "bank"
+  >("mobile_money");
+  const [adminWithdrawPhone, setAdminWithdrawPhone] = useState("");
+  const [adminWithdrawBankName, setAdminWithdrawBankName] = useState("");
+  const [adminWithdrawAccNum, setAdminWithdrawAccNum] = useState("");
+  const [adminWithdrawAccName, setAdminWithdrawAccName] = useState("");
+  const [adminWithdrawNote, setAdminWithdrawNote] = useState("");
+  const [adminWithdrawError, setAdminWithdrawError] = useState("");
+  const [adminWithdrawLoading, setAdminWithdrawLoading] = useState(false);
+
+  const handleMarkWithdrawalComplete = async (withdrawalId: string) => {
+    if (!token) return;
+    setUpdatingWithdrawal(withdrawalId);
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api"}/admin/revenue/withdrawals/${withdrawalId}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ status: "completed" }),
+        },
+      );
+      const data = await res.json();
+      if (data.success) {
+        setRecentWithdrawals((prev) =>
+          prev.map((w) =>
+            w._id === withdrawalId ? { ...w, status: "completed" as const } : w,
+          ),
+        );
+        // Refresh summary counts
+        setPendingWithdrawalCount((c) => Math.max(0, c - 1));
+      }
+    } catch (err) {
+      console.error("Failed to update withdrawal:", err);
+    } finally {
+      setUpdatingWithdrawal(null);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -80,6 +131,9 @@ function RevenueContent() {
           setPlatformRevenue(res.revenue.platformRevenue);
           setClientRevenue(res.revenue.clientRevenue);
           setRevenueShare(res.revenue.revenueShare);
+          if (res.revenue.adminWithdrawableBalance !== undefined) {
+            setAdminWithdrawableBalance(res.revenue.adminWithdrawableBalance);
+          }
           if (res.revenue.withdrawals) {
             setTotalWithdrawn(res.revenue.withdrawals.totalWithdrawn);
             setPendingWithdrawals(res.revenue.withdrawals.pendingAmount);
@@ -190,6 +244,34 @@ function RevenueContent() {
 
           {!isLoading && !error && (
             <>
+              {/* Admin Withdrawable Balance Banner */}
+              <div className="mb-6 flex items-center justify-between rounded-xl border border-indigo-200 bg-linear-to-r from-indigo-50 to-purple-50 px-6 py-4">
+                <div>
+                  <p className="text-sm font-medium text-indigo-600">
+                    Your Available Balance (Platform Cut)
+                  </p>
+                  <p className="mt-0.5 text-3xl font-bold text-indigo-900">
+                    UGX {adminWithdrawableBalance.toLocaleString()}
+                  </p>
+                  <p className="mt-1 text-xs text-indigo-500">
+                    Accumulated {revenueShare}% platform share minus prior
+                    withdrawals
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setAdminWithdrawStep("form");
+                    setAdminWithdrawAmount("");
+                    setAdminWithdrawError("");
+                    setShowAdminWithdrawModal(true);
+                  }}
+                  disabled={adminWithdrawableBalance < 1000}
+                  className="ml-4 shrink-0 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Withdraw
+                </button>
+              </div>
+
               {/* Revenue Summary Cards */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                 <div className="bg-white rounded-lg border border-gray-200 p-6">
@@ -573,6 +655,9 @@ function RevenueContent() {
                           <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
                             Date
                           </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
+                            Actions
+                          </th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
@@ -610,6 +695,22 @@ function RevenueContent() {
                             <td className="px-4 py-3 text-gray-500">
                               {new Date(w.createdAt).toLocaleDateString()}
                             </td>
+                            <td className="px-4 py-3">
+                              {(w.status === "pending" ||
+                                w.status === "processing") && (
+                                <button
+                                  onClick={() =>
+                                    handleMarkWithdrawalComplete(w._id)
+                                  }
+                                  disabled={updatingWithdrawal === w._id}
+                                  className="rounded-md bg-green-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                                >
+                                  {updatingWithdrawal === w._id
+                                    ? "Updating..."
+                                    : "Mark complete"}
+                                </button>
+                              )}
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -627,6 +728,369 @@ function RevenueContent() {
           )}
         </main>
       </div>
+
+      {/* Admin Withdraw Modal */}
+      {showAdminWithdrawModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            {adminWithdrawStep === "form" && (
+              <>
+                <div className="mb-5 flex items-start justify-between">
+                  <div>
+                    <h2 className="text-lg font-bold text-gray-900">
+                      Withdraw Platform Revenue
+                    </h2>
+                    <p className="mt-0.5 text-sm text-gray-500">
+                      Available:{" "}
+                      <span className="font-semibold text-indigo-600">
+                        UGX {adminWithdrawableBalance.toLocaleString()}
+                      </span>
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowAdminWithdrawModal(false)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {adminWithdrawError && (
+                  <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+                    {adminWithdrawError}
+                  </div>
+                )}
+
+                {/* Amount */}
+                <div className="mb-4">
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    Amount (UGX)
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      value={adminWithdrawAmount}
+                      onChange={(e) => setAdminWithdrawAmount(e.target.value)}
+                      placeholder="e.g. 50000"
+                      min={1000}
+                      max={adminWithdrawableBalance}
+                      className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+                    />
+                    <button
+                      onClick={() =>
+                        setAdminWithdrawAmount(String(adminWithdrawableBalance))
+                      }
+                      className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-medium text-indigo-600 hover:bg-indigo-100"
+                    >
+                      All
+                    </button>
+                  </div>
+                </div>
+
+                {/* Method */}
+                <div className="mb-4">
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    Payout Method
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {(
+                      [
+                        ["mobile_money", "Mobile Money"],
+                        ["bank", "Bank Transfer"],
+                      ] as const
+                    ).map(([val, label]) => (
+                      <button
+                        key={val}
+                        onClick={() => setAdminWithdrawMethod(val)}
+                        className={`rounded-lg border py-2 text-sm font-medium transition-colors ${
+                          adminWithdrawMethod === val
+                            ? "border-indigo-500 bg-indigo-50 text-indigo-700"
+                            : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Mobile money fields */}
+                {adminWithdrawMethod === "mobile_money" && (
+                  <div className="mb-4">
+                    <label className="mb-1 block text-sm font-medium text-gray-700">
+                      Phone Number (Uganda)
+                    </label>
+                    <input
+                      type="tel"
+                      value={adminWithdrawPhone}
+                      onChange={(e) => setAdminWithdrawPhone(e.target.value)}
+                      placeholder="256701234567"
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+                    />
+                  </div>
+                )}
+
+                {/* Bank fields */}
+                {adminWithdrawMethod === "bank" && (
+                  <div className="mb-4 space-y-3">
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-gray-700">
+                        Bank Code
+                      </label>
+                      <input
+                        type="text"
+                        value={adminWithdrawBankName}
+                        onChange={(e) =>
+                          setAdminWithdrawBankName(e.target.value)
+                        }
+                        placeholder="e.g. STANBIC_BANK"
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-gray-700">
+                        Account Number
+                      </label>
+                      <input
+                        type="text"
+                        value={adminWithdrawAccNum}
+                        onChange={(e) => setAdminWithdrawAccNum(e.target.value)}
+                        placeholder="e.g. 9030012345678"
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-gray-700">
+                        Account Name
+                      </label>
+                      <input
+                        type="text"
+                        value={adminWithdrawAccName}
+                        onChange={(e) =>
+                          setAdminWithdrawAccName(e.target.value)
+                        }
+                        placeholder="Account holder name"
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Note */}
+                <div className="mb-5">
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    Note (optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={adminWithdrawNote}
+                    onChange={(e) => setAdminWithdrawNote(e.target.value)}
+                    placeholder="e.g. Q1 revenue withdrawal"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+                  />
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowAdminWithdrawModal(false)}
+                    className="flex-1 rounded-xl border border-gray-200 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      const amt = Number(adminWithdrawAmount);
+                      if (!amt || amt < 1000) {
+                        setAdminWithdrawError(
+                          "Minimum withdrawal is UGX 1,000",
+                        );
+                        return;
+                      }
+                      if (amt > adminWithdrawableBalance) {
+                        setAdminWithdrawError(
+                          "Amount exceeds available balance",
+                        );
+                        return;
+                      }
+                      if (
+                        adminWithdrawMethod === "mobile_money" &&
+                        !/^256[0-9]{9}$/.test(adminWithdrawPhone)
+                      ) {
+                        setAdminWithdrawError(
+                          "Enter a valid Uganda number: 256XXXXXXXXX",
+                        );
+                        return;
+                      }
+                      if (
+                        adminWithdrawMethod === "bank" &&
+                        (!adminWithdrawBankName ||
+                          !adminWithdrawAccNum ||
+                          !adminWithdrawAccName)
+                      ) {
+                        setAdminWithdrawError("All bank fields are required");
+                        return;
+                      }
+                      setAdminWithdrawError("");
+                      setAdminWithdrawStep("confirm");
+                    }}
+                    className="flex-1 rounded-xl bg-indigo-600 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700"
+                  >
+                    Continue
+                  </button>
+                </div>
+              </>
+            )}
+
+            {adminWithdrawStep === "confirm" && (
+              <>
+                <h2 className="mb-4 text-lg font-bold text-gray-900">
+                  Confirm Withdrawal
+                </h2>
+                <div className="mb-5 rounded-xl bg-gray-50 p-4 text-sm space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Amount</span>
+                    <span className="font-semibold text-gray-900">
+                      UGX {Number(adminWithdrawAmount).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Method</span>
+                    <span className="font-semibold text-gray-900">
+                      {adminWithdrawMethod === "mobile_money"
+                        ? "Mobile Money"
+                        : "Bank Transfer"}
+                    </span>
+                  </div>
+                  {adminWithdrawMethod === "mobile_money" ? (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Phone</span>
+                      <span className="font-semibold text-gray-900">
+                        {adminWithdrawPhone}
+                      </span>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Bank</span>
+                        <span className="font-semibold text-gray-900">
+                          {adminWithdrawBankName}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Account</span>
+                        <span className="font-semibold text-gray-900">
+                          {adminWithdrawAccNum}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Name</span>
+                        <span className="font-semibold text-gray-900">
+                          {adminWithdrawAccName}
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {adminWithdrawError && (
+                  <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+                    {adminWithdrawError}
+                  </div>
+                )}
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setAdminWithdrawStep("form")}
+                    disabled={adminWithdrawLoading}
+                    className="flex-1 rounded-xl border border-gray-200 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    Back
+                  </button>
+                  <button
+                    disabled={adminWithdrawLoading}
+                    onClick={async () => {
+                      if (!token) return;
+                      setAdminWithdrawLoading(true);
+                      setAdminWithdrawError("");
+                      try {
+                        const result = await revenueAPI.withdraw(token, {
+                          amount: Number(adminWithdrawAmount),
+                          payoutMethod: adminWithdrawMethod,
+                          payoutDetails:
+                            adminWithdrawMethod === "mobile_money"
+                              ? { phone: adminWithdrawPhone }
+                              : {
+                                  bankName: adminWithdrawBankName,
+                                  bankAccountNumber: adminWithdrawAccNum,
+                                  accountName: adminWithdrawAccName,
+                                },
+                          note: adminWithdrawNote || undefined,
+                        });
+                        if (result.success) {
+                          setAdminWithdrawableBalance((b) =>
+                            Math.max(0, b - Number(adminWithdrawAmount)),
+                          );
+                          setAdminWithdrawStep("done");
+                        } else {
+                          setAdminWithdrawError(
+                            result.message || "Withdrawal failed",
+                          );
+                        }
+                      } catch {
+                        setAdminWithdrawError("Network error. Please retry.");
+                      } finally {
+                        setAdminWithdrawLoading(false);
+                      }
+                    }}
+                    className="flex-1 rounded-xl bg-indigo-600 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+                  >
+                    {adminWithdrawLoading
+                      ? "Processing..."
+                      : "Confirm Withdraw"}
+                  </button>
+                </div>
+              </>
+            )}
+
+            {adminWithdrawStep === "done" && (
+              <div className="text-center">
+                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-green-100">
+                  <svg
+                    className="h-7 w-7 text-green-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                </div>
+                <h2 className="mb-2 text-lg font-bold text-gray-900">
+                  Withdrawal Initiated
+                </h2>
+                <p className="mb-6 text-sm text-gray-500">
+                  UGX {Number(adminWithdrawAmount).toLocaleString()} has been
+                  sent via{" "}
+                  {adminWithdrawMethod === "mobile_money"
+                    ? "Mobile Money"
+                    : "Bank Transfer"}
+                  .
+                </p>
+                <button
+                  onClick={() => setShowAdminWithdrawModal(false)}
+                  className="w-full rounded-xl bg-indigo-600 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700"
+                >
+                  Done
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

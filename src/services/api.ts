@@ -624,4 +624,42 @@ export const revenueAPI = {
       };
     }
   },
+
+  /**
+   * Admin withdraws their accumulated platform cut via JulyPay
+   */
+  withdraw: async (
+    token: string,
+    data: {
+      amount: number;
+      payoutMethod: "mobile_money" | "bank";
+      payoutDetails: {
+        phone?: string;
+        bankAccountNumber?: string;
+        bankName?: string;
+        accountName?: string;
+      };
+      note?: string;
+    },
+  ): Promise<{
+    success: boolean;
+    withdrawal?: object;
+    status?: string;
+    message?: string;
+  }> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/revenue/withdraw`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(data),
+      });
+      return await response.json();
+    } catch (error) {
+      console.error("Admin withdraw error:", error);
+      return { success: false, message: "Network error" };
+    }
+  },
 };
