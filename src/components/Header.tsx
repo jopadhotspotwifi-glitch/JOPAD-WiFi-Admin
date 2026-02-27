@@ -20,7 +20,7 @@ export default function Header({ title, subtitle }: HeaderProps) {
 
         <div className="flex items-center gap-4">
           {/* Search */}
-          <div className="relative">
+          {/* <div className="relative">
             <input
               type="text"
               placeholder="Search..."
@@ -39,10 +39,10 @@ export default function Header({ title, subtitle }: HeaderProps) {
                 d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
               />
             </svg>
-          </div>
+          </div> */}
 
           {/* Notifications */}
-          <div className="relative">
+          {/* <div className="relative">
             <button
               onClick={() => setShowNotifications(!showNotifications)}
               className="relative p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 hover:cursor-pointer rounded-lg transition-colors"
@@ -84,7 +84,7 @@ export default function Header({ title, subtitle }: HeaderProps) {
                 </div>
               </div>
             )}
-          </div>
+          </div> */}
         </div>
       </div>
     </header>
