@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
+import ConfirmModal from "@/components/ConfirmModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { settingsAPI, authAPI } from "@/services/api";
 import type { SystemSettings } from "@/types";
@@ -35,6 +36,7 @@ export default function SettingsPage() {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
   const [changingPassword, setChangingPassword] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   // Fetch settings on component mount
   useEffect(() => {
@@ -119,13 +121,7 @@ export default function SettingsPage() {
   const handleReset = async () => {
     if (!token) return;
 
-    if (
-      !confirm(
-        "Are you sure you want to reset all settings to default values? This action cannot be undone.",
-      )
-    ) {
-      return;
-    }
+    setShowResetConfirm(false);
 
     try {
       setSaving(true);
@@ -705,7 +701,7 @@ export default function SettingsPage() {
             {/* Save Button */}
             <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center gap-3">
               <button
-                onClick={handleReset}
+                onClick={() => setShowResetConfirm(true)}
                 disabled={saving}
                 className="px-4 py-2 text-red-600 hover:bg-red-50 border border-red-200 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
@@ -757,6 +753,16 @@ export default function SettingsPage() {
           </div>
         </main>
       </div>
+
+      <ConfirmModal
+        isOpen={showResetConfirm}
+        title="Reset Settings"
+        message="Are you sure you want to reset all settings to default values? This action cannot be undone."
+        confirmLabel="Reset"
+        type="danger"
+        onConfirm={handleReset}
+        onCancel={() => setShowResetConfirm(false)}
+      />
     </div>
   );
 }

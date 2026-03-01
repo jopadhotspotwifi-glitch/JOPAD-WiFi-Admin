@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import AlertModal from "@/components/AlertModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { clientsAPI, Client as APIClient } from "@/services/clients";
 
@@ -47,6 +48,12 @@ function ClientsContent() {
     type: "success" | "warning";
   } | null>(null);
   const [isResendingCredentials, setIsResendingCredentials] = useState(false);
+  const [alertModal, setAlertModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: "success" | "error" | "info";
+  }>({ isOpen: false, title: "", message: "", type: "error" });
 
   // Password reset state
   const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
@@ -188,10 +195,20 @@ function ClientsContent() {
         setSelectedClient(null);
         fetchClients(); // Refresh the list
       } else {
-        alert(response.message || "Failed to delete client");
+        setAlertModal({
+          isOpen: true,
+          title: "Delete Failed",
+          message: response.message || "Failed to delete client",
+          type: "error",
+        });
       }
     } catch (err) {
-      alert("Network error. Please try again.");
+      setAlertModal({
+        isOpen: true,
+        title: "Network Error",
+        message: "Network error. Please try again.",
+        type: "error",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -217,10 +234,20 @@ function ClientsContent() {
         });
         setTimeout(() => setSuccessMessage(null), 8000);
       } else {
-        alert(response.message || "Failed to resend credentials");
+        setAlertModal({
+          isOpen: true,
+          title: "Resend Failed",
+          message: response.message || "Failed to resend credentials",
+          type: "error",
+        });
       }
     } catch (err) {
-      alert("Network error. Please try again.");
+      setAlertModal({
+        isOpen: true,
+        title: "Network Error",
+        message: "Network error. Please try again.",
+        type: "error",
+      });
     } finally {
       setIsResendingCredentials(false);
     }
@@ -1172,6 +1199,14 @@ function ClientsContent() {
           </div>
         </div>
       )}
+
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        title={alertModal.title}
+        message={alertModal.message}
+        type={alertModal.type}
+        onClose={() => setAlertModal((prev) => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 }
