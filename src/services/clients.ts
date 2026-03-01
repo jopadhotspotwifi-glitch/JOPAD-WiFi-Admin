@@ -25,6 +25,7 @@ interface ClientResponse {
   success: boolean;
   client?: Client;
   message: string;
+  emailSent?: boolean;
 }
 
 export const clientsAPI = {
@@ -127,6 +128,70 @@ export const clientsAPI = {
         Authorization: `Bearer ${token}`,
       },
     });
+
+    return await response.json();
+  },
+
+  /**
+   * Resend login credentials to a client (generates new provisional password)
+   */
+  resendCredentials: async (
+    token: string,
+    id: string,
+  ): Promise<ClientResponse> => {
+    const response = await fetch(
+      `${API_BASE_URL}/admin/clients/${id}/resend-credentials`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+
+    return await response.json();
+  },
+
+  /**
+   * Send a password reset OTP to the client's email
+   */
+  requestResetOTP: async (
+    token: string,
+    id: string,
+  ): Promise<ClientResponse> => {
+    const response = await fetch(
+      `${API_BASE_URL}/admin/clients/${id}/request-reset-otp`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+
+    return await response.json();
+  },
+
+  /**
+   * Verify OTP and set a new password for a client
+   */
+  resetPassword: async (
+    token: string,
+    id: string,
+    otp: string,
+    newPassword: string,
+  ): Promise<ClientResponse> => {
+    const response = await fetch(
+      `${API_BASE_URL}/admin/clients/${id}/reset-password`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ otp, newPassword }),
+      },
+    );
 
     return await response.json();
   },

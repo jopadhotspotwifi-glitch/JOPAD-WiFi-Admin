@@ -67,6 +67,8 @@ function RevenueContent() {
   const [updatingWithdrawal, setUpdatingWithdrawal] = useState<string | null>(
     null,
   );
+  const [withdrawalsPage, setWithdrawalsPage] = useState(0);
+  const WITHDRAWALS_PAGE_SIZE = 10;
   const [adminWithdrawableBalance, setAdminWithdrawableBalance] = useState(0);
   const [showAdminWithdrawModal, setShowAdminWithdrawModal] = useState(false);
   const [adminWithdrawStep, setAdminWithdrawStep] = useState<
@@ -661,60 +663,105 @@ function RevenueContent() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
-                        {recentWithdrawals.map((w) => (
-                          <tr key={w._id} className="hover:bg-gray-50">
-                            <td className="px-4 py-3 font-medium text-gray-900">
-                              {w.clientName || "—"}
-                            </td>
-                            <td className="px-4 py-3 font-semibold text-gray-900">
-                              UGX {w.amount.toLocaleString()}
-                            </td>
-                            <td className="px-4 py-3 text-gray-600">
-                              {w.payoutMethod === "mobile_money"
-                                ? "Mobile Money"
-                                : "Bank"}
-                            </td>
-                            <td className="px-4 py-3 text-gray-500 text-xs">
-                              {w.payoutMethod === "mobile_money"
-                                ? w.payoutDetails.phone
-                                : `${w.payoutDetails.bankName ?? ""} – ${w.payoutDetails.bankAccountNumber ?? ""}`}
-                            </td>
-                            <td className="px-4 py-3">
-                              <span
-                                className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                                  w.status === "completed"
-                                    ? "bg-green-100 text-green-700"
-                                    : w.status === "failed"
-                                      ? "bg-red-100 text-red-700"
-                                      : "bg-yellow-100 text-yellow-700"
-                                }`}
-                              >
-                                {w.status}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-gray-500">
-                              {new Date(w.createdAt).toLocaleDateString()}
-                            </td>
-                            <td className="px-4 py-3">
-                              {(w.status === "pending" ||
-                                w.status === "processing") && (
-                                <button
-                                  onClick={() =>
-                                    handleMarkWithdrawalComplete(w._id)
-                                  }
-                                  disabled={updatingWithdrawal === w._id}
-                                  className="rounded-md bg-green-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                        {recentWithdrawals
+                          .slice(
+                            withdrawalsPage * WITHDRAWALS_PAGE_SIZE,
+                            (withdrawalsPage + 1) * WITHDRAWALS_PAGE_SIZE,
+                          )
+                          .map((w) => (
+                            <tr key={w._id} className="hover:bg-gray-50">
+                              <td className="px-4 py-3 font-medium text-gray-900">
+                                {w.clientName || "—"}
+                              </td>
+                              <td className="px-4 py-3 font-semibold text-gray-900">
+                                UGX {w.amount.toLocaleString()}
+                              </td>
+                              <td className="px-4 py-3 text-gray-600">
+                                {w.payoutMethod === "mobile_money"
+                                  ? "Mobile Money"
+                                  : "Bank"}
+                              </td>
+                              <td className="px-4 py-3 text-gray-500 text-xs">
+                                {w.payoutMethod === "mobile_money"
+                                  ? w.payoutDetails.phone
+                                  : `${w.payoutDetails.bankName ?? ""} – ${w.payoutDetails.bankAccountNumber ?? ""}`}
+                              </td>
+                              <td className="px-4 py-3">
+                                <span
+                                  className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                                    w.status === "completed"
+                                      ? "bg-green-100 text-green-700"
+                                      : w.status === "failed"
+                                        ? "bg-red-100 text-red-700"
+                                        : "bg-yellow-100 text-yellow-700"
+                                  }`}
                                 >
-                                  {updatingWithdrawal === w._id
-                                    ? "Updating..."
-                                    : "Mark complete"}
-                                </button>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
+                                  {w.status}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-gray-500">
+                                {new Date(w.createdAt).toLocaleDateString()}
+                              </td>
+                              <td className="px-4 py-3">
+                                {(w.status === "pending" ||
+                                  w.status === "processing") && (
+                                  <button
+                                    onClick={() =>
+                                      handleMarkWithdrawalComplete(w._id)
+                                    }
+                                    disabled={updatingWithdrawal === w._id}
+                                    className="rounded-md bg-green-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                                  >
+                                    {updatingWithdrawal === w._id
+                                      ? "Updating..."
+                                      : "Mark complete"}
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
                       </tbody>
                     </table>
+                    {recentWithdrawals.length > WITHDRAWALS_PAGE_SIZE && (
+                      <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200">
+                        <button
+                          onClick={() =>
+                            setWithdrawalsPage((p) => Math.max(0, p - 1))
+                          }
+                          disabled={withdrawalsPage === 0}
+                          className="px-4 py-2 text-sm rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          Previous
+                        </button>
+                        <span className="text-sm text-gray-500">
+                          Page {withdrawalsPage + 1} of{" "}
+                          {Math.ceil(
+                            recentWithdrawals.length / WITHDRAWALS_PAGE_SIZE,
+                          )}{" "}
+                          ({recentWithdrawals.length} total)
+                        </span>
+                        <button
+                          onClick={() =>
+                            setWithdrawalsPage((p) =>
+                              Math.min(
+                                Math.ceil(
+                                  recentWithdrawals.length /
+                                    WITHDRAWALS_PAGE_SIZE,
+                                ) - 1,
+                                p + 1,
+                              ),
+                            )
+                          }
+                          disabled={
+                            (withdrawalsPage + 1) * WITHDRAWALS_PAGE_SIZE >=
+                            recentWithdrawals.length
+                          }
+                          className="px-4 py-2 text-sm rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          Next
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="rounded-lg border border-gray-200 bg-white p-8 text-center">

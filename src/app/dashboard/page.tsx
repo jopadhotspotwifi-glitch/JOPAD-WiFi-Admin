@@ -43,6 +43,10 @@ function DashboardContent() {
   const [recentActivity, setRecentActivity] = useState<ClientActivity[]>([]);
   const [revenueTrend, setRevenueTrend] = useState<RevenueData[]>([]);
   const [currentTime] = useState(() => Date.now());
+  const [showActivityModal, setShowActivityModal] = useState(false);
+  const [activityPage, setActivityPage] = useState(0);
+  const ACTIVITY_LIMIT = 5;
+  const ACTIVITY_PAGE_SIZE = 10;
 
   // Fetch real stats, revenue trend, and activity from API
   useEffect(() => {
@@ -283,32 +287,47 @@ function DashboardContent() {
 
                 {/* Recent Activity */}
                 <div className="bg-gray-100 rounded-2xl border border-gray-200 p-6">
-                  <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                    Recent Activity
-                  </h2>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-semibold text-gray-900">
+                      Recent Activity
+                    </h2>
+                    {recentActivity.length > ACTIVITY_LIMIT && (
+                      <button
+                        onClick={() => {
+                          setActivityPage(0);
+                          setShowActivityModal(true);
+                        }}
+                        className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                      >
+                        View all
+                      </button>
+                    )}
+                  </div>
                   {recentActivity.length > 0 ? (
                     <div className="space-y-4">
-                      {recentActivity.map((activity) => (
-                        <div key={activity.id} className="flex gap-3">
-                          <div className="w-2 h-2 bg-blue-600 rounded-full mt-2 shrink-0"></div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900 truncate">
-                              {activity.clientName}
-                            </p>
-                            <p className="text-xs text-gray-600">
-                              {activity.action}
-                            </p>
-                            {activity.details && (
-                              <p className="text-xs text-gray-500 mt-0.5">
-                                {activity.details}
+                      {recentActivity
+                        .slice(0, ACTIVITY_LIMIT)
+                        .map((activity) => (
+                          <div key={activity.id} className="flex gap-3">
+                            <div className="w-2 h-2 bg-blue-600 rounded-full mt-2 shrink-0"></div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 truncate">
+                                {activity.clientName}
                               </p>
-                            )}
-                            <p className="text-xs text-gray-400 mt-1">
-                              {formatTimeAgo(activity.timestamp)}
-                            </p>
+                              <p className="text-xs text-gray-600">
+                                {activity.action}
+                              </p>
+                              {activity.details && (
+                                <p className="text-xs text-gray-500 mt-0.5">
+                                  {activity.details}
+                                </p>
+                              )}
+                              <p className="text-xs text-gray-400 mt-1">
+                                {formatTimeAgo(activity.timestamp)}
+                              </p>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        ))}
                     </div>
                   ) : (
                     <div className="flex items-center justify-center h-40 text-gray-400 text-sm">
@@ -409,6 +428,96 @@ function DashboardContent() {
           )}
         </main>
       </div>
+
+      {/* All Activity Modal */}
+      {showActivityModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-900">
+                All Activity
+              </h2>
+              <button
+                onClick={() => setShowActivityModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+              {recentActivity
+                .slice(
+                  activityPage * ACTIVITY_PAGE_SIZE,
+                  (activityPage + 1) * ACTIVITY_PAGE_SIZE,
+                )
+                .map((activity) => (
+                  <div key={activity.id} className="flex gap-3">
+                    <div className="w-2 h-2 bg-blue-600 rounded-full mt-2 shrink-0"></div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {activity.clientName}
+                      </p>
+                      <p className="text-xs text-gray-600">{activity.action}</p>
+                      {activity.details && (
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          {activity.details}
+                        </p>
+                      )}
+                      <p className="text-xs text-gray-400 mt-1">
+                        {formatTimeAgo(activity.timestamp)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+            </div>
+            {recentActivity.length > ACTIVITY_PAGE_SIZE && (
+              <div className="flex items-center justify-between px-6 py-3 border-t border-gray-200">
+                <button
+                  onClick={() => setActivityPage((p) => Math.max(0, p - 1))}
+                  disabled={activityPage === 0}
+                  className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                <span className="text-sm text-gray-500">
+                  Page {activityPage + 1} of{" "}
+                  {Math.ceil(recentActivity.length / ACTIVITY_PAGE_SIZE)}
+                </span>
+                <button
+                  onClick={() =>
+                    setActivityPage((p) =>
+                      Math.min(
+                        Math.ceil(recentActivity.length / ACTIVITY_PAGE_SIZE) -
+                          1,
+                        p + 1,
+                      ),
+                    )
+                  }
+                  disabled={
+                    (activityPage + 1) * ACTIVITY_PAGE_SIZE >=
+                    recentActivity.length
+                  }
+                  className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

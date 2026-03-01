@@ -108,6 +108,27 @@ export const authAPI = {
     const data = await response.json();
     return data;
   },
+
+  /**
+   * Change admin password
+   */
+  changePassword: async (
+    token: string,
+    currentPassword: string,
+    newPassword: string,
+  ) => {
+    const response = await fetch(`${API_BASE_URL}/admin/auth/change-password`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+
+    const data = await response.json();
+    return data;
+  },
 };
 
 export const locationsAPI = {

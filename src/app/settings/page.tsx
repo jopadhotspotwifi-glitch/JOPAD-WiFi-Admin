@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import { useAuth } from "@/contexts/AuthContext";
-import { settingsAPI } from "@/services/api";
+import { settingsAPI, authAPI } from "@/services/api";
 import type { SystemSettings } from "@/types";
 
 export default function SettingsPage() {
@@ -27,6 +27,14 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Password change state
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
+  const [changingPassword, setChangingPassword] = useState(false);
 
   // Fetch settings on component mount
   useEffect(() => {
@@ -146,6 +154,47 @@ export default function SettingsPage() {
       setError("Failed to reset settings. Please try again.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError(null);
+    setPasswordSuccess(null);
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPasswordError("All fields are required");
+      return;
+    }
+    if (newPassword.length < 8) {
+      setPasswordError("New password must be at least 8 characters");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError("New passwords do not match");
+      return;
+    }
+
+    setChangingPassword(true);
+    try {
+      const response = await authAPI.changePassword(
+        token!,
+        currentPassword,
+        newPassword,
+      );
+      if (response.success) {
+        setPasswordSuccess("Password changed successfully!");
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+        setTimeout(() => setPasswordSuccess(null), 3000);
+      } else {
+        setPasswordError(response.message || "Failed to change password");
+      }
+    } catch {
+      setPasswordError("Network error. Please try again.");
+    } finally {
+      setChangingPassword(false);
     }
   };
 
@@ -412,28 +461,6 @@ export default function SettingsPage() {
                           <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                         </label>
                       </div>
-
-                      <div className="flex items-center justify-between py-3">
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">
-                            Automatic Backups
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            Daily system backups at 2:00 AM
-                          </p>
-                        </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={settings.autoBackup}
-                            onChange={(e) =>
-                              handleToggle("autoBackup", e.target.checked)
-                            }
-                            className="sr-only peer"
-                          />
-                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                        </label>
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -610,83 +637,66 @@ export default function SettingsPage() {
                 <div className="space-y-6">
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                      Security Settings
+                      Change Password
                     </h3>
-                    <div className="space-y-4">
+                    <form
+                      onSubmit={handleChangePassword}
+                      className="space-y-3 max-w-md"
+                    >
+                      {passwordError && (
+                        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded-lg text-sm">
+                          {passwordError}
+                        </div>
+                      )}
+                      {passwordSuccess && (
+                        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-2 rounded-lg text-sm">
+                          {passwordSuccess}
+                        </div>
+                      )}
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Change Password
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Current Password
                         </label>
                         <input
                           type="password"
-                          placeholder="Current password"
-                          className="w-full max-w-md px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3"
+                          value={currentPassword}
+                          onChange={(e) => setCurrentPassword(e.target.value)}
+                          placeholder="Enter current password"
+                          className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          New Password
+                        </label>
                         <input
                           type="password"
-                          placeholder="New password"
-                          className="w-full max-w-md px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3"
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          placeholder="At least 8 characters"
+                          className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Confirm New Password
+                        </label>
                         <input
                           type="password"
-                          placeholder="Confirm new password"
-                          className="w-full max-w-md px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          placeholder="Repeat new password"
+                          className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                       </div>
-                    </div>
-                  </div>
-
-                  <div className="pt-6 border-t border-gray-200">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                      Two-Factor Authentication
-                    </h3>
-                    <div className="flex items-start gap-4">
-                      <div className="flex-1">
-                        <p className="text-sm text-gray-700 mb-2">
-                          Add an extra layer of security to your account by
-                          enabling two-factor authentication.
-                        </p>
-                        <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
-                          Enable 2FA
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="pt-6 border-t border-gray-200">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                      Active Sessions
-                    </h3>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <svg
-                            className="w-5 h-5 text-gray-400"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                            />
-                          </svg>
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">
-                              Current Session
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              Windows • Chrome • Kampala, Uganda
-                            </p>
-                          </div>
-                        </div>
-                        <span className="text-xs text-green-600 font-medium">
-                          Active
-                        </span>
-                      </div>
-                    </div>
+                      <button
+                        type="submit"
+                        disabled={changingPassword}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {changingPassword ? "Updating..." : "Update Password"}
+                      </button>
+                    </form>
                   </div>
                 </div>
               )}

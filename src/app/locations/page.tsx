@@ -24,6 +24,8 @@ export default function LocationsPage() {
     null,
   );
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [currentPage, setCurrentPage] = useState(0);
+  const PAGE_SIZE = 10;
   const { token } = useAuth();
 
   // Fetch locations from API
@@ -196,16 +198,20 @@ export default function LocationsPage() {
                       type="text"
                       placeholder="Search by location, client, or address..."
                       value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
+                      onChange={(e) => {
+                        setSearchTerm(e.target.value);
+                        setCurrentPage(0);
+                      }}
                       className="w-full px-4 py-2 text-gray-600 border border-gray-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
 
                   <select
                     value={statusFilter}
-                    onChange={(e) =>
-                      setStatusFilter(e.target.value as typeof statusFilter)
-                    }
+                    onChange={(e) => {
+                      setStatusFilter(e.target.value as typeof statusFilter);
+                      setCurrentPage(0);
+                    }}
                     className="px-4 py-2 text-gray-600 border border-gray-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="all">All Status</option>
@@ -216,9 +222,10 @@ export default function LocationsPage() {
 
                   <select
                     value={routerFilter}
-                    onChange={(e) =>
-                      setRouterFilter(e.target.value as typeof routerFilter)
-                    }
+                    onChange={(e) => {
+                      setRouterFilter(e.target.value as typeof routerFilter);
+                      setCurrentPage(0);
+                    }}
                     className="px-4 py-2 text-gray-600 border border-gray-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="all">All Routers</option>
@@ -259,58 +266,63 @@ export default function LocationsPage() {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {filteredLocations.map((location) => (
-                        <tr key={location.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4">
-                            <div>
-                              <p className="text-sm font-medium text-gray-900">
-                                {location.name}
+                      {filteredLocations
+                        .slice(
+                          currentPage * PAGE_SIZE,
+                          (currentPage + 1) * PAGE_SIZE,
+                        )
+                        .map((location) => (
+                          <tr key={location.id} className="hover:bg-gray-50">
+                            <td className="px-6 py-4">
+                              <div>
+                                <p className="text-sm font-medium text-gray-900">
+                                  {location.name}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  {location.address}
+                                </p>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <p className="text-sm text-gray-900">
+                                {location.clientName}
                               </p>
-                              <p className="text-xs text-gray-500">
-                                {location.address}
-                              </p>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <p className="text-sm text-gray-900">
-                              {location.clientName}
-                            </p>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="text-sm text-gray-900 font-mono">
-                              {location.routerType}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-2">
-                              {getStatusIcon(location.status)}
-                              <span
-                                className={`text-xs px-2 py-1 rounded-full font-medium ${getStatusColor(location.status)}`}
-                              >
-                                {location.status}
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className="text-sm text-gray-900 font-mono">
+                                {location.routerType}
                               </span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <p className="text-sm text-gray-900">
-                              {location.activeSessions}
-                            </p>
-                          </td>
-                          <td className="px-6 py-4">
-                            <p className="text-sm font-medium text-gray-900">
-                              {formatCurrency(location.totalRevenue)}
-                            </p>
-                          </td>
-                          <td className="px-6 py-4">
-                            <button
-                              onClick={() => handleViewDetails(location)}
-                              className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-                            >
-                              View Details
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-2">
+                                {getStatusIcon(location.status)}
+                                <span
+                                  className={`text-xs px-2 py-1 rounded-full font-medium ${getStatusColor(location.status)}`}
+                                >
+                                  {location.status}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <p className="text-sm text-gray-900">
+                                {location.activeSessions}
+                              </p>
+                            </td>
+                            <td className="px-6 py-4">
+                              <p className="text-sm font-medium text-gray-900">
+                                {formatCurrency(location.totalRevenue)}
+                              </p>
+                            </td>
+                            <td className="px-6 py-4">
+                              <button
+                                onClick={() => handleViewDetails(location)}
+                                className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                              >
+                                View Details
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
                     </tbody>
                   </table>
                 </div>
@@ -342,6 +354,40 @@ export default function LocationsPage() {
                   </div>
                 )}
               </div>
+
+              {/* Pagination */}
+              {filteredLocations.length > PAGE_SIZE && (
+                <div className="flex items-center justify-between mt-4 px-2">
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
+                    disabled={currentPage === 0}
+                    className="px-4 py-2 text-sm rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    Previous
+                  </button>
+                  <span className="text-sm text-gray-500">
+                    Page {currentPage + 1} of{" "}
+                    {Math.ceil(filteredLocations.length / PAGE_SIZE)} (
+                    {filteredLocations.length} total)
+                  </span>
+                  <button
+                    onClick={() =>
+                      setCurrentPage((p) =>
+                        Math.min(
+                          Math.ceil(filteredLocations.length / PAGE_SIZE) - 1,
+                          p + 1,
+                        ),
+                      )
+                    }
+                    disabled={
+                      (currentPage + 1) * PAGE_SIZE >= filteredLocations.length
+                    }
+                    className="px-4 py-2 text-sm rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
             </>
           )}
         </main>

@@ -52,6 +52,8 @@ function AnalyticsContent() {
   const [topLocations, setTopLocations] = useState<TopLocation[]>([]);
   const [deviceStats, setDeviceStats] = useState<DeviceStat[]>([]);
   const [hourlyData, setHourlyData] = useState<HourlyTraffic[]>([]);
+  const [topLocationsPage, setTopLocationsPage] = useState(0);
+  const TOP_LOCATIONS_PAGE_SIZE = 10;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -397,48 +399,96 @@ function AnalyticsContent() {
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
-                        {topLocations.map((location, index) => (
-                          <tr key={index} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div
-                                className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
-                                  index === 0
-                                    ? "bg-yellow-100 text-yellow-700"
-                                    : index === 1
-                                      ? "bg-gray-100 text-gray-700"
-                                      : index === 2
-                                        ? "bg-orange-100 text-orange-700"
-                                        : "bg-blue-50 text-blue-600"
-                                }`}
-                              >
-                                {index + 1}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4">
-                              <p className="text-sm font-medium text-gray-900">
-                                {location.name}
-                              </p>
-                            </td>
-                            <td className="px-6 py-4">
-                              <p className="text-sm text-gray-900">
-                                {location.client}
-                              </p>
-                            </td>
-                            <td className="px-6 py-4">
-                              <p className="text-sm text-gray-900">
-                                {location.sessions.toLocaleString()}
-                              </p>
-                            </td>
-                            <td className="px-6 py-4">
-                              <p className="text-sm font-medium text-gray-900">
-                                {formatCurrency(location.revenue)}
-                              </p>
-                            </td>
-                          </tr>
-                        ))}
+                        {topLocations
+                          .slice(
+                            topLocationsPage * TOP_LOCATIONS_PAGE_SIZE,
+                            (topLocationsPage + 1) * TOP_LOCATIONS_PAGE_SIZE,
+                          )
+                          .map((location, index) => {
+                            const globalIndex =
+                              topLocationsPage * TOP_LOCATIONS_PAGE_SIZE +
+                              index;
+                            return (
+                              <tr key={index} className="hover:bg-gray-50">
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div
+                                    className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
+                                      globalIndex === 0
+                                        ? "bg-yellow-100 text-yellow-700"
+                                        : globalIndex === 1
+                                          ? "bg-gray-100 text-gray-700"
+                                          : globalIndex === 2
+                                            ? "bg-orange-100 text-orange-700"
+                                            : "bg-blue-50 text-blue-600"
+                                    }`}
+                                  >
+                                    {globalIndex + 1}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4">
+                                  <p className="text-sm font-medium text-gray-900">
+                                    {location.name}
+                                  </p>
+                                </td>
+                                <td className="px-6 py-4">
+                                  <p className="text-sm text-gray-900">
+                                    {location.client}
+                                  </p>
+                                </td>
+                                <td className="px-6 py-4">
+                                  <p className="text-sm text-gray-900">
+                                    {location.sessions.toLocaleString()}
+                                  </p>
+                                </td>
+                                <td className="px-6 py-4">
+                                  <p className="text-sm font-medium text-gray-900">
+                                    {formatCurrency(location.revenue)}
+                                  </p>
+                                </td>
+                              </tr>
+                            );
+                          })}
                       </tbody>
                     </table>
                   </div>
+                  {topLocations.length > TOP_LOCATIONS_PAGE_SIZE && (
+                    <div className="flex items-center justify-between px-6 py-3 border-t border-gray-200">
+                      <button
+                        onClick={() =>
+                          setTopLocationsPage((p) => Math.max(0, p - 1))
+                        }
+                        disabled={topLocationsPage === 0}
+                        className="px-4 py-2 text-sm rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        Previous
+                      </button>
+                      <span className="text-sm text-gray-500">
+                        Page {topLocationsPage + 1} of{" "}
+                        {Math.ceil(
+                          topLocations.length / TOP_LOCATIONS_PAGE_SIZE,
+                        )}
+                      </span>
+                      <button
+                        onClick={() =>
+                          setTopLocationsPage((p) =>
+                            Math.min(
+                              Math.ceil(
+                                topLocations.length / TOP_LOCATIONS_PAGE_SIZE,
+                              ) - 1,
+                              p + 1,
+                            ),
+                          )
+                        }
+                        disabled={
+                          (topLocationsPage + 1) * TOP_LOCATIONS_PAGE_SIZE >=
+                          topLocations.length
+                        }
+                        className="px-4 py-2 text-sm rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </>
