@@ -9,7 +9,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "JOPAD Admin - Platform Management",
+  title: "BruceWifi Admin - Platform Management",
   description: "WiFi platform administration and management portal",
 };
 
