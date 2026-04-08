@@ -91,7 +91,7 @@ export default function OTPLoginPage() {
         <div className="w-full max-w-md">
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              JOPAD Wi-Fi Admin
+              Bruce Wi-Fi Admin
             </h1>
             <p className="text-gray-600">
               {step === "email"
@@ -120,7 +120,7 @@ export default function OTPLoginPage() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@odok.com"
+                  placeholder="admin@example.com"
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
                   required
                 />

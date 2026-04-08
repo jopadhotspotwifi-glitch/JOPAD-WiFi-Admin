@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { settingsAPI } from "@/services/api";
 
 interface SidebarItem {
   name: string;
@@ -13,8 +14,38 @@ interface SidebarItem {
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { admin, logout } = useAuth();
+  const { admin, token, logout } = useAuth();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [supportEmail, setSupportEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchSupportEmail = async () => {
+      if (!token) {
+        if (isMounted) setSupportEmail(null);
+        return;
+      }
+
+      try {
+        const response = await settingsAPI.get(token);
+
+        if (isMounted && response?.success) {
+          setSupportEmail(response?.data?.supportEmail || null);
+        }
+      } catch {
+        if (isMounted) {
+          setSupportEmail(null);
+        }
+      }
+    };
+
+    fetchSupportEmail();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [token]);
 
   const handleLogoutClick = () => {
     setShowLogoutModal(true);
@@ -220,7 +251,7 @@ export default function Sidebar() {
               Admin User
             </p>
             <p className="text-xs text-gray-400 truncate">
-              {admin?.email || "admin@odok.com"}
+              {supportEmail || admin?.email || "admin@odok.com"}
             </p>
           </div>
           <button
